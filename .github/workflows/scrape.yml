@@ -1,0 +1,164 @@
+name: 🔥 Telegram Scraper
+
+on:
+  workflow_dispatch:
+    inputs:
+      api_id:
+        description: 'API ID'
+        required: true
+      api_hash:
+        description: 'API Hash'
+        required: true
+      phone:
+        description: 'Phone (+62...)'
+        required: true
+      session_string:
+        description: 'Session String (kosong jika baru)'
+        required: false
+        default: ''
+      source_group:
+        description: 'Grup Sumber (@username/ID)'
+        required: true
+      target_channel:
+        description: 'Channel Tujuan (@username)'
+        required: true
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+    
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install dependencies
+      run: |
+        pip install telethon
+    
+    - name: 🔥 Run Scraper
+      env:
+        API_ID: ${{ github.event.inputs.api_id }}
+        API_HASH: ${{ github.event.inputs.api_hash }}
+        PHONE: ${{ github.event.inputs.phone }}
+        SESSION_STRING: ${{ github.event.inputs.session_string }}
+        SOURCE_GROUP: ${{ github.event.inputs.source_group }}
+        TARGET_CHANNEL: ${{ github.event.inputs.target_channel }}
+      run: |
+        python3 << 'PYTHON_SCRIPT'
+        import os
+        import sys
+        import csv
+        import asyncio
+        from telethon import TelegramClient
+        from telethon.sessions import StringSession
+        
+        async def main():
+            api_id = int(os.environ['API_ID'])
+            api_hash = os.environ['API_HASH']
+            phone = os.environ['PHONE']
+            session_str = os.environ.get('SESSION_STRING', '')
+            source_group = os.environ['SOURCE_GROUP']
+            target_channel = os.environ['TARGET_CHANNEL']
+            
+            print("=" * 60)
+            print("🚀 TELEGRAM SCRAPER - GITHUB ACTIONS")
+            print("=" * 60)
+            
+            # Setup client
+            if session_str:
+                client = TelegramClient(StringSession(session_str), api_id, api_hash)
+                print("📱 Menggunakan session string yang ada")
+            else:
+                client = TelegramClient(StringSession(), api_id, api_hash)
+                print("📱 Session baru (akan minta OTP)")
+            
+            await client.connect()
+            
+            # Login jika belum
+            if not await client.is_user_authorized():
+                print(f"📤 Mengirim kode OTP ke {phone}")
+                await client.send_code_request(phone)
+                print("❌ Anda perlu login manual pertama kali!")
+                print("💡 Gunakan script lokal untuk mendapatkan session string")
+                return
+            
+            print(f"✅ Login berhasil!")
+            print(f"🔑 Session String: {client.session.save()}")
+            print("-" * 60)
+            
+            # Get group
+            try:
+                if source_group.startswith('-') or source_group.lstrip('-').isdigit():
+                    entity = await client.get_entity(int(source_group))
+                else:
+                    entity = await client.get_entity(source_group)
+                print(f"👥 Target Grup: {entity.title}")
+            except Exception as e:
+                print(f"❌ Error grup: {e}")
+                return
+            
+            # Scrape members
+            print(f"\n📥 Mulai scraping...")
+            members = []
+            
+            async for member in client.iter_participants(entity):
+                members.append({
+                    'id': member.id,
+                    'username': member.username or '',
+                    'first_name': member.first_name or '',
+                    'last_name': member.last_name or '',
+                    'phone': member.phone or '',
+                    'is_bot': 'Yes' if member.bot else 'No'
+                })
+                
+                if len(members) % 100 == 0:
+                    print(f"   Progress: {len(members)} anggota...")
+            
+            print(f"\n✅ Total: {len(members)} anggota")
+            
+            # Save CSV
+            filename = f"members_{entity.title.replace(' ', '_').replace('/', '_')}.csv"
+            with open(filename, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.DictWriter(f, fieldnames=['id', 'username', 'first_name', 'last_name', 'phone', 'is_bot'])
+                writer.writeheader()
+                writer.writerows(members)
+            
+            print(f"💾 File: {filename}")
+            
+            # Send to channel
+            try:
+                await client.send_message(target_channel, f"""📊 **HASIL SCRAPING**
+
+👥 Grup: {entity.title}
+📊 Total: {len(members)} anggota
+🤖 Bot: {sum(1 for m in members if m['is_bot'] == 'Yes')}
+👤 Users: {sum(1 for m in members if m['is_bot'] == 'No')}
+
+📁 File CSV terlampir...""")
+                
+                await client.send_file(target_channel, filename, caption="📁 Daftar lengkap anggota")
+                print(f"✅ Terkirim ke {target_channel}")
+            except Exception as e:
+                print(f"❌ Error kirim: {e}")
+            
+            # Upload artifact
+            print(f"\n📤 Mengupload artifact...")
+            
+            await client.disconnect()
+            print("=" * 60)
+            print("🎉 SELESAI!")
+            print("=" * 60)
+        
+        asyncio.run(main())
+        PYTHON_SCRIPT
+    
+    - name: 📤 Upload CSV
+      uses: actions/upload-artifact@v3
+      with:
+        name: telegram-members
+        path: members_*.csv
