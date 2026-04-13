@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Scraper - GitHub Server</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 700px; margin: 0 auto; }
+        .header { text-align: center; color: white; padding: 30px 0; }
+        .header h1 { font-size: 2rem; margin-bottom: 10px; }
+        .card { background: white; border-radius: 20px; padding: 25px; margin-bottom: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
+        .card h2 { color: #333; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        .step { background: #0088cc; color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 600; color: #555; }
+        input, textarea { width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 1rem; }
+        input:focus, textarea:focus { outline: none; border-color: #0088cc; }
+        .btn { width: 100%; padding: 15px; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: 0.3s; }
+        .btn-primary { background: linear-gradient(135deg, #0088cc, #24d1f6); color: white; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,136,204,0.3); }
+        .btn-success { background: linear-gradient(135deg, #28a745, #34ce57); color: white; }
+        .alert { padding: 15px; border-radius: 10px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+        .alert-info { background: #e3f2fd; color: #0d47a1; border-left: 4px solid #0088cc; }
+        .alert-warning { background: #fff3e0; color: #ef6c00; border-left: 4px solid #ff9800; }
+        .alert-success { background: #e8f5e9; color: #2e7d32; border-left: 4px solid #4caf50; }
+        .hidden { display: none !important; }
+        .code-box { background: #f5f5f5; padding: 15px; border-radius: 10px; font-family: monospace; font-size: 0.9rem; overflow-x: auto; margin: 10px 0; }
+        .status { display: flex; align-items: center; gap: 10px; padding: 15px; background: #f8f9fa; border-radius: 10px; margin-bottom: 15px; }
+        .spinner { width: 20px; height: 20px; border: 3px solid #ddd; border-top-color: #0088cc; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .link { color: #0088cc; text-decoration: none; font-weight: 600; }
+        .link:hover { text-decoration: underline; }
+        .footer { text-align: center; color: white; opacity: 0.8; padding: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🚀 Telegram Scraper</h1>
+            <p>Powered by GitHub Actions (Serverless)</p>
+        </div>
+
+        <!-- Info -->
+        <div class="card">
+            <div class="alert alert-info">
+                <span>ℹ️</span>
+                <div>
+                    <strong>Cara kerja:</strong><br>
+                    1. Isi form di bawah<br>
+                    2. Klik "Jalankan di GitHub"<br>
+                    3. Scraper berjalan di server GitHub<br>
+                    4. Hasil otomatis dikirim ke channel Anda
+                </div>
+            </div>
+        </div>
+
+        <!-- Konfigurasi -->
+        <div class="card" id="configSection">
+            <h2><span class="step">1</span> Konfigurasi</h2>
+            
+            <div class="form-group">
+                <label>API ID <small>(dari <a href="https://my.telegram.org/apps" class="link" target="_blank">my.telegram.org</a>)</small></label>
+                <input type="number" id="apiId" placeholder="12345678">
+            </div>
+
+            <div class="form-group">
+                <label>API Hash</label>
+                <input type="text" id="apiHash" placeholder="a1b2c3d4e5f6...">
+            </div>
+
+            <div class="form-group">
+                <label>Nomor Telepon</label>
+                <input type="text" id="phone" placeholder="+6281234567890">
+            </div>
+
+            <div class="form-group">
+                <label>Session String <small>(kosongkan jika pertama kali)</small></label>
+                <textarea id="sessionString" rows="2" placeholder="1BQANOTEz..."></textarea>
+            </div>
+
+            <button onclick="saveConfig()" class="btn btn-primary">💾 Simpan Config</button>
+        </div>
+
+        <!-- Target -->
+        <div class="card" id="targetSection">
+            <h2><span class="step">2</span> Target Scraping</h2>
+            
+            <div class="form-group">
+                <label>Grup Sumber</label>
+                <input type="text" id="sourceGroup" placeholder="@namagrup atau -1001234567890">
+            </div>
+
+            <div class="form-group">
+                <label>Channel Tujuan <small>(untuk menerima hasil)</small></label>
+                <input type="text" id="targetChannel" placeholder="@channelhasil">
+            </div>
+
+            <div class="alert alert-warning">
+                <span>⚠️</span>
+                <div>
+                    Pastikan Anda sudah join grup sumber dan channel tujuan!
+                </div>
+            </div>
+
+            <button onclick="runScraper()" class="btn btn-success">🚀 Jalankan Scraper di GitHub</button>
+        </div>
+
+        <!-- Status -->
+        <div class="card hidden" id="statusSection">
+            <h2><span class="step">⏳</span> Status</h2>
+            
+            <div class="status">
+                <div class="spinner"></div>
+                <div>
+                    <strong>Scraper sedang berjalan...</strong><br>
+                    <small id="runId">Run ID: -</small>
+                </div>
+            </div>
+
+            <div class="alert alert-info">
+                <span>📱</span>
+                <div>
+                    Cek hasil di Telegram channel Anda!<br>
+                    Atau lihat progress di <a id="githubLink" href="#" class="link" target="_blank">GitHub Actions →</a>
+                </div>
+            </div>
+
+            <div class="code-box hidden" id="newSession">
+                <strong>Session String Baru (simpan ini):</strong><br>
+                <span id="sessionText"></span>
+            </div>
+
+            <button onclick="resetForm()" class="btn btn-primary" style="margin-top: 15px;">🔄 Scraping Baru</button>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>© 2024 | GitHub: <a href="#" class="link" id="repoLink" target="_blank">Lihat Repository</a></p>
+        </div>
+    </div>
+
+    <script>
+        // GANTI INI DENGAN DATA REPOSITORY ANDA
+        const GITHUB_OWNER = 'rathxsouterrain';      // ← GANTI
+        const GITHUB_REPO = 'telegram-scraper';     // ← GANTI
+
+        // Load config dari localStorage
+        document.getElementById('apiId').value = localStorage.getItem('tg_api_id') || '';
+        document.getElementById('apiHash').value = localStorage.getItem('tg_api_hash') || '';
+        document.getElementById('phone').value = localStorage.getItem('tg_phone') || '';
+        document.getElementById('sessionString').value = localStorage.getItem('tg_session') || '';
+        document.getElementById('sourceGroup').value = localStorage.getItem('tg_group') || '';
+        document.getElementById('targetChannel').value = localStorage.getItem('tg_channel') || '';
+
+        // Update link
+        document.getElementById('repoLink').href = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}`;
+        document.getElementById('githubLink').href = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/actions`;
+
+        function saveConfig() {
+            const apiId = document.getElementById('apiId').value.trim();
+            const apiHash = document.getElementById('apiHash').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const session = document.getElementById('sessionString').value.trim();
+
+            if (!apiId || !apiHash || !phone) {
+                alert('Semua field harus diisi!');
+                return;
+            }
+
+            localStorage.setItem('tg_api_id', apiId);
+            localStorage.setItem('tg_api_hash', apiHash);
+            localStorage.setItem('tg_phone', phone);
+            localStorage.setItem('tg_session', session);
+
+            alert('✅ Config disimpan!');
+        }
+
+        function runScraper() {
+            const apiId = document.getElementById('apiId').value.trim();
+            const apiHash = document.getElementById('apiHash').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const session = document.getElementById('sessionString').value.trim();
+            const group = document.getElementById('sourceGroup').value.trim();
+            const channel = document.getElementById('targetChannel').value.trim();
+
+            if (!apiId || !apiHash || !phone || !group) {
+                alert('Lengkapi semua field!');
+                return;
+            }
+
+            localStorage.setItem('tg_group', group);
+            localStorage.setItem('tg_channel', channel);
+
+            // Buka GitHub Actions dengan inputs
+            const inputs = {
+                api_id: apiId,
+                api_hash: apiHash,
+                phone: phone,
+                session_string: session,
+                source_group: group,
+                target_channel: channel
+            };
+
+            // Encode untuk URL
+            const params = btoa(JSON.stringify(inputs));
+            
+            // Buka GitHub Actions manual trigger
+            const githubUrl = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/actions/workflows/scrape.yml`;
+            
+            // Copy config ke clipboard
+            navigator.clipboard.writeText(JSON.stringify(inputs, null, 2));
+            
+            alert('📋 Config dicopy ke clipboard!\n\nSekarang Anda akan diarahkan ke GitHub Actions.\nKlik "Run workflow" dan paste config di sana.');
+
+            // Buka GitHub
+            window.open(githubUrl, '_blank');
+
+            // Tampilkan status
+            document.getElementById('configSection').classList.add('hidden');
+            document.getElementById('targetSection').classList.add('hidden');
+            document.getElementById('statusSection').classList.remove('hidden');
+        }
+
+        function resetForm() {
+            document.getElementById('configSection').classList.remove('hidden');
+            document.getElementById('targetSection').classList.remove('hidden');
+            document.getElementById('statusSection').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
