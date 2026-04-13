@@ -3,240 +3,111 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Telegram Scraper - GitHub Server</title>
+    <title>Telegram Scraper</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
-        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
-        .container { max-width: 700px; margin: 0 auto; }
-        .header { text-align: center; color: white; padding: 30px 0; }
-        .header h1 { font-size: 2rem; margin-bottom: 10px; }
-        .card { background: white; border-radius: 20px; padding: 25px; margin-bottom: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
-        .card h2 { color: #333; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
-        .step { background: #0088cc; color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: 600; color: #555; }
-        input, textarea { width: 100%; padding: 12px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 1rem; }
-        input:focus, textarea:focus { outline: none; border-color: #0088cc; }
-        .btn { width: 100%; padding: 15px; border: none; border-radius: 10px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: 0.3s; }
-        .btn-primary { background: linear-gradient(135deg, #0088cc, #24d1f6); color: white; }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(0,136,204,0.3); }
-        .btn-success { background: linear-gradient(135deg, #28a745, #34ce57); color: white; }
-        .alert { padding: 15px; border-radius: 10px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
-        .alert-info { background: #e3f2fd; color: #0d47a1; border-left: 4px solid #0088cc; }
-        .alert-warning { background: #fff3e0; color: #ef6c00; border-left: 4px solid #ff9800; }
-        .alert-success { background: #e8f5e9; color: #2e7d32; border-left: 4px solid #4caf50; }
-        .alert-danger { background: #ffebee; color: #c62828; border-left: 4px solid #f44336; }
-        .hidden { display: none !important; }
-        .code-box { background: #f5f5f5; padding: 15px; border-radius: 10px; font-family: monospace; font-size: 0.85rem; overflow-x: auto; margin: 10px 0; word-break: break-all; }
-        .status { display: flex; align-items: center; gap: 10px; padding: 15px; background: #f8f9fa; border-radius: 10px; margin-bottom: 15px; }
-        .spinner { width: 20px; height: 20px; border: 3px solid #ddd; border-top-color: #0088cc; border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        .link { color: #0088cc; text-decoration: none; font-weight: 600; }
-        .link:hover { text-decoration: underline; }
-        .footer { text-align: center; color: white; opacity: 0.8; padding: 20px; }
-        .log-box { background: #263238; color: #aed581; padding: 15px; border-radius: 10px; font-family: monospace; font-size: 0.8rem; max-height: 300px; overflow-y: auto; margin-top: 15px; }
-        .log-box .error { color: #ef5350; }
-        .log-box .success { color: #69f0ae; }
+        body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; background: #667eea; }
+        .card { background: white; padding: 25px; border-radius: 15px; margin-bottom: 20px; }
+        h1 { color: white; text-align: center; }
+        h2 { font-size: 1.2rem; margin-top: 20px; }
+        input, textarea { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; }
+        .btn { width: 100%; padding: 15px; background: #0088cc; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; }
+        .btn-green { background: #28a745; }
+        .alert { background: #fff3e0; padding: 15px; border-radius: 8px; margin: 15px 0; border-left: 4px solid #ff9800; }
+        code { background: #f5f5f5; padding: 2px 6px; border-radius: 4px; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <h1>🚀 Telegram Scraper</h1>
-            <p>Powered by GitHub Actions</p>
+    <h1>🚀 Telegram Scraper</h1>
+    
+    <div class="card">
+        <div class="alert">
+            <strong>⚠️ Mode: Google Colab / Replit</strong><br>
+            GitHub Actions tidak tersedia. Gunakan alternatif di bawah.
         </div>
+        
+        <h2>Step 1: Isi Data</h2>
+        <input type="number" id="apiId" placeholder="API ID">
+        <input type="text" id="apiHash" placeholder="API Hash">
+        <input type="text" id="phone" placeholder="+6281234567890">
+        <textarea id="session" rows="2" placeholder="Session String (wajib)"></textarea>
+        <input type="text" id="group" placeholder="Grup: @namagrup">
+        <input type="text" id="channel" placeholder="Channel: @channeltujuan">
+        
+        <button onclick="generateScript()" class="btn">📋 Generate Script</button>
+    </div>
 
-        <!-- Error Display -->
-        <div class="card hidden" id="errorBox">
-            <div class="alert alert-danger">
-                <span>❌</span>
-                <div id="errorText"></div>
-            </div>
-        </div>
-
-        <!-- Info -->
-        <div class="card">
-            <div class="alert alert-info">
-                <span>ℹ️</span>
-                <div>
-                    <strong>Cara kerja:</strong><br>
-                    1. Isi form di bawah<br>
-                    2. Klik "Generate & Copy Config"<br>
-                    3. Buka GitHub Actions (link akan muncul)<br>
-                    4. Klik "Run workflow" dan paste config
-                </div>
-            </div>
-        </div>
-
-        <!-- Konfigurasi -->
-        <div class="card" id="configSection">
-            <h2><span class="step">1</span> Konfigurasi Telegram</h2>
-            
-            <div class="form-group">
-                <label>API ID <small>(dari <a href="https://my.telegram.org/apps" class="link" target="_blank">my.telegram.org</a>)</small></label>
-                <input type="number" id="apiId" placeholder="Contoh: 12345678">
-            </div>
-
-            <div class="form-group">
-                <label>API Hash</label>
-                <input type="text" id="apiHash" placeholder="Contoh: a1b2c3d4e5f6...">
-            </div>
-
-            <div class="form-group">
-                <label>Nomor Telepon</label>
-                <input type="text" id="phone" placeholder="Format: +6281234567890">
-            </div>
-
-            <div class="form-group">
-                <label>Session String <small>(kosongkan jika pertama kali)</small></label>
-                <textarea id="sessionString" rows="2" placeholder="1BQANOTEz... (dari login pertama)"></textarea>
-            </div>
-        </div>
-
-        <!-- Target -->
-        <div class="card" id="targetSection">
-            <h2><span class="step">2</span> Target Scraping</h2>
-            
-            <div class="form-group">
-                <label>Grup Sumber</label>
-                <input type="text" id="sourceGroup" placeholder="@namagrup atau -1001234567890">
-            </div>
-
-            <div class="form-group">
-                <label>Channel Tujuan <small>(untuk menerima hasil)</small></label>
-                <input type="text" id="targetChannel" placeholder="@channelhasil">
-            </div>
-
-            <div class="alert alert-warning">
-                <span>⚠️</span>
-                <div>
-                    Pastikan Anda sudah join grup sumber dan channel tujuan!<br>
-                    Bot harus admin di channel tujuan (kalau pakai bot token).
-                </div>
-            </div>
-
-            <button onclick="generateConfig()" class="btn btn-success">📋 Generate & Copy Config</button>
-        </div>
-
-        <!-- Config Output -->
-        <div class="card hidden" id="outputSection">
-            <h2><span class="step">3</span> Config Generated</h2>
-            
-            <div class="alert alert-success">
-                <span>✅</span>
-                <div>Config sudah di-copy ke clipboard!</div>
-            </div>
-
-            <label>Config (paste di GitHub Actions):</label>
-            <div class="code-box" id="configOutput"></div>
-
-            <button onclick="openGitHub()" class="btn btn-primary" style="margin-top: 15px;">🚀 Buka GitHub Actions</button>
-            
-            <div style="margin-top: 15px; text-align: center;">
-                <a id="githubLink" href="#" class="link" target="_blank">Atau klik link ini →</a>
-            </div>
-        </div>
-
-        <!-- Instructions -->
-        <div class="card">
-            <h2>📖 Cara Run di GitHub</h2>
-            <ol style="margin-left: 20px; line-height: 2; color: #555;">
-                <li>Klik tombol "Buka GitHub Actions" di atas</li>
-                <li>Di GitHub, klik tombol <strong>"Run workflow"</strong> (warna biru)</li>
-                <li>Isi form yang muncul dengan data di atas</li>
-                <li>Klik <strong>"Run workflow"</strong></li>
-                <li>Tunggu 1-3 menit, cek channel Telegram Anda!</li>
-            </ol>
-        </div>
-
-        <!-- Footer -->
-        <div class="footer">
-            <p>Repo: <a href="#" class="link" id="repoLink" target="_blank">github.com/<span id="ownerDisplay">username</span>/<span id="repoDisplay">repo</span></a></p>
-        </div>
+    <div class="card" id="output" style="display:none;">
+        <h2>Step 2: Copy & Jalankan</h2>
+        <p>Copy script di bawah, buka <a href="https://colab.research.google.com" target="_blank">Google Colab</a>, paste, run!</p>
+        <textarea id="scriptBox" rows="15" style="font-family: monospace; font-size: 12px;"></textarea>
+        <button onclick="copyScript()" class="btn btn-green">📋 Copy Script</button>
     </div>
 
     <script>
-        // ⚠️ GANTI INI DENGAN DATA ANDA
-        const GITHUB_OWNER = 'rathxsoutetrain';      // ← USERNAME GITHUB ANDA
-        const GITHUB_REPO = 'telegram-scraper';       // ← NAMA REPOSITORY
+        function generateScript() {
+            const apiId = document.getElementById('apiId').value;
+            const apiHash = document.getElementById('apiHash').value;
+            const phone = document.getElementById('phone').value;
+            const session = document.getElementById('session').value;
+            const group = document.getElementById('group').value;
+            const channel = document.getElementById('channel').value;
 
-        // Build URLs yang benar
-        const REPO_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}`;
-        const ACTIONS_URL = `${REPO_URL}/actions`;
-        const WORKFLOW_URL = `${REPO_URL}/actions/workflows/scrape.yml`;
+            const script = `!pip install telethon
+from telethon import TelegramClient
+from telethon.sessions import StringSession
+import csv
 
-        // Update tampilan
-        document.getElementById('ownerDisplay').textContent = GITHUB_OWNER;
-        document.getElementById('repoDisplay').textContent = GITHUB_REPO;
-        document.getElementById('repoLink').href = REPO_URL;
+api_id = ${apiId}
+api_hash = '${apiHash}'
+session_string = '${session}'
+source_group = '${group}'
+target_channel = '${channel}'
 
-        // Load dari localStorage
-        document.getElementById('apiId').value = localStorage.getItem('tg_api_id') || '';
-        document.getElementById('apiHash').value = localStorage.getItem('tg_api_hash') || '';
-        document.getElementById('phone').value = localStorage.getItem('tg_phone') || '';
-        document.getElementById('sessionString').value = localStorage.getItem('tg_session') || '';
-        document.getElementById('sourceGroup').value = localStorage.getItem('tg_group') || '';
-        document.getElementById('targetChannel').value = localStorage.getItem('tg_channel') || '';
+client = TelegramClient(StringSession(session_string), api_id, api_hash)
 
-        function showError(msg) {
-            document.getElementById('errorText').textContent = msg;
-            document.getElementById('errorBox').classList.remove('hidden');
-            setTimeout(() => document.getElementById('errorBox').classList.add('hidden'), 5000);
+async def scrape():
+    await client.start()
+    print("✅ Login berhasil!")
+    
+    entity = await client.get_entity(source_group)
+    print(f"📥 Scraping: {entity.title}")
+    
+    members = []
+    async for member in client.iter_participants(entity):
+        members.append({
+            'id': member.id,
+            'username': member.username or '',
+            'first_name': member.first_name or '',
+            'last_name': member.last_name or '',
+            'is_bot': 'Yes' if member.bot else 'No'
+        })
+        if len(members) % 100 == 0:
+            print(f"Progress: {len(members)}")
+    
+    # Save
+    filename = f"members_{entity.title.replace(' ', '_')}.csv"
+    with open(filename, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.DictWriter(f, fieldnames=['id', 'username', 'first_name', 'last_name', 'is_bot'])
+        writer.writeheader()
+        writer.writerows(members)
+    
+    print(f"✅ Saved: {filename} ({len(members)} members)")
+    
+    # Send to channel
+    await client.send_message(target_channel, f"📊 {len(members)} members from {entity.title}")
+    await client.send_file(target_channel, filename)
+    print("✅ Sent to channel!")
+
+with client:
+    client.loop.run_until_complete(scrape())`;
+
+            document.getElementById('scriptBox').value = script;
+            document.getElementById('output').style.display = 'block';
         }
 
-        function generateConfig() {
-            const apiId = document.getElementById('apiId').value.trim();
-            const apiHash = document.getElementById('apiHash').value.trim();
-            const phone = document.getElementById('phone').value.trim();
-            const session = document.getElementById('sessionString').value.trim();
-            const group = document.getElementById('sourceGroup').value.trim();
-            const channel = document.getElementById('targetChannel').value.trim();
-
-            // Validasi
-            if (!apiId || !apiHash || !phone || !group) {
-                showError('Lengkapi API ID, API Hash, Phone, dan Grup Sumber!');
-                return;
-            }
-
-            // Simpan ke localStorage
-            localStorage.setItem('tg_api_id', apiId);
-            localStorage.setItem('tg_api_hash', apiHash);
-            localStorage.setItem('tg_phone', phone);
-            localStorage.setItem('tg_session', session);
-            localStorage.setItem('tg_group', group);
-            localStorage.setItem('tg_channel', channel);
-
-            // Buat config untuk GitHub Actions
-            const config = {
-                api_id: apiId,
-                api_hash: apiHash,
-                phone: phone,
-                session_string: session || '(kosong - akan minta OTP)',
-                source_group: group,
-                target_channel: channel || '(kosong - tidak kirim ke channel)'
-            };
-
-            const configText = JSON.stringify(config, null, 2);
-            
-            // Tampilkan
-            document.getElementById('configOutput').textContent = configText;
-            document.getElementById('outputSection').classList.remove('hidden');
-            document.getElementById('githubLink').href = ACTIONS_URL;
-
-            // Copy ke clipboard
-            navigator.clipboard.writeText(configText).then(() => {
-                console.log('Config copied!');
-            }).catch(err => {
-                console.error('Copy failed:', err);
-            });
-
-            // Scroll ke output
-            document.getElementById('outputSection').scrollIntoView({ behavior: 'smooth' });
-        }
-
-        function openGitHub() {
-            window.open(ACTIONS_URL, '_blank');
+        function copyScript() {
+            navigator.clipboard.writeText(document.getElementById('scriptBox').value);
+            alert('Script copied! Buka Google Colab dan paste.');
         }
     </script>
 </body>
