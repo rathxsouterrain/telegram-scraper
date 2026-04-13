@@ -25,14 +25,18 @@
         .alert-info { background: #e3f2fd; color: #0d47a1; border-left: 4px solid #0088cc; }
         .alert-warning { background: #fff3e0; color: #ef6c00; border-left: 4px solid #ff9800; }
         .alert-success { background: #e8f5e9; color: #2e7d32; border-left: 4px solid #4caf50; }
+        .alert-danger { background: #ffebee; color: #c62828; border-left: 4px solid #f44336; }
         .hidden { display: none !important; }
-        .code-box { background: #f5f5f5; padding: 15px; border-radius: 10px; font-family: monospace; font-size: 0.9rem; overflow-x: auto; margin: 10px 0; }
+        .code-box { background: #f5f5f5; padding: 15px; border-radius: 10px; font-family: monospace; font-size: 0.85rem; overflow-x: auto; margin: 10px 0; word-break: break-all; }
         .status { display: flex; align-items: center; gap: 10px; padding: 15px; background: #f8f9fa; border-radius: 10px; margin-bottom: 15px; }
         .spinner { width: 20px; height: 20px; border: 3px solid #ddd; border-top-color: #0088cc; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
         .link { color: #0088cc; text-decoration: none; font-weight: 600; }
         .link:hover { text-decoration: underline; }
         .footer { text-align: center; color: white; opacity: 0.8; padding: 20px; }
+        .log-box { background: #263238; color: #aed581; padding: 15px; border-radius: 10px; font-family: monospace; font-size: 0.8rem; max-height: 300px; overflow-y: auto; margin-top: 15px; }
+        .log-box .error { color: #ef5350; }
+        .log-box .success { color: #69f0ae; }
     </style>
 </head>
 <body>
@@ -40,7 +44,15 @@
         <!-- Header -->
         <div class="header">
             <h1>🚀 Telegram Scraper</h1>
-            <p>Powered by GitHub Actions (Serverless)</p>
+            <p>Powered by GitHub Actions</p>
+        </div>
+
+        <!-- Error Display -->
+        <div class="card hidden" id="errorBox">
+            <div class="alert alert-danger">
+                <span>❌</span>
+                <div id="errorText"></div>
+            </div>
         </div>
 
         <!-- Info -->
@@ -50,38 +62,36 @@
                 <div>
                     <strong>Cara kerja:</strong><br>
                     1. Isi form di bawah<br>
-                    2. Klik "Jalankan di GitHub"<br>
-                    3. Scraper berjalan di server GitHub<br>
-                    4. Hasil otomatis dikirim ke channel Anda
+                    2. Klik "Generate & Copy Config"<br>
+                    3. Buka GitHub Actions (link akan muncul)<br>
+                    4. Klik "Run workflow" dan paste config
                 </div>
             </div>
         </div>
 
         <!-- Konfigurasi -->
         <div class="card" id="configSection">
-            <h2><span class="step">1</span> Konfigurasi</h2>
+            <h2><span class="step">1</span> Konfigurasi Telegram</h2>
             
             <div class="form-group">
                 <label>API ID <small>(dari <a href="https://my.telegram.org/apps" class="link" target="_blank">my.telegram.org</a>)</small></label>
-                <input type="number" id="apiId" placeholder="12345678">
+                <input type="number" id="apiId" placeholder="Contoh: 12345678">
             </div>
 
             <div class="form-group">
                 <label>API Hash</label>
-                <input type="text" id="apiHash" placeholder="a1b2c3d4e5f6...">
+                <input type="text" id="apiHash" placeholder="Contoh: a1b2c3d4e5f6...">
             </div>
 
             <div class="form-group">
                 <label>Nomor Telepon</label>
-                <input type="text" id="phone" placeholder="+6281234567890">
+                <input type="text" id="phone" placeholder="Format: +6281234567890">
             </div>
 
             <div class="form-group">
                 <label>Session String <small>(kosongkan jika pertama kali)</small></label>
-                <textarea id="sessionString" rows="2" placeholder="1BQANOTEz..."></textarea>
+                <textarea id="sessionString" rows="2" placeholder="1BQANOTEz... (dari login pertama)"></textarea>
             </div>
-
-            <button onclick="saveConfig()" class="btn btn-primary">💾 Simpan Config</button>
         </div>
 
         <!-- Target -->
@@ -101,53 +111,67 @@
             <div class="alert alert-warning">
                 <span>⚠️</span>
                 <div>
-                    Pastikan Anda sudah join grup sumber dan channel tujuan!
+                    Pastikan Anda sudah join grup sumber dan channel tujuan!<br>
+                    Bot harus admin di channel tujuan (kalau pakai bot token).
                 </div>
             </div>
 
-            <button onclick="runScraper()" class="btn btn-success">🚀 Jalankan Scraper di GitHub</button>
+            <button onclick="generateConfig()" class="btn btn-success">📋 Generate & Copy Config</button>
         </div>
 
-        <!-- Status -->
-        <div class="card hidden" id="statusSection">
-            <h2><span class="step">⏳</span> Status</h2>
+        <!-- Config Output -->
+        <div class="card hidden" id="outputSection">
+            <h2><span class="step">3</span> Config Generated</h2>
             
-            <div class="status">
-                <div class="spinner"></div>
-                <div>
-                    <strong>Scraper sedang berjalan...</strong><br>
-                    <small id="runId">Run ID: -</small>
-                </div>
+            <div class="alert alert-success">
+                <span>✅</span>
+                <div>Config sudah di-copy ke clipboard!</div>
             </div>
 
-            <div class="alert alert-info">
-                <span>📱</span>
-                <div>
-                    Cek hasil di Telegram channel Anda!<br>
-                    Atau lihat progress di <a id="githubLink" href="#" class="link" target="_blank">GitHub Actions →</a>
-                </div>
-            </div>
+            <label>Config (paste di GitHub Actions):</label>
+            <div class="code-box" id="configOutput"></div>
 
-            <div class="code-box hidden" id="newSession">
-                <strong>Session String Baru (simpan ini):</strong><br>
-                <span id="sessionText"></span>
+            <button onclick="openGitHub()" class="btn btn-primary" style="margin-top: 15px;">🚀 Buka GitHub Actions</button>
+            
+            <div style="margin-top: 15px; text-align: center;">
+                <a id="githubLink" href="#" class="link" target="_blank">Atau klik link ini →</a>
             </div>
+        </div>
 
-            <button onclick="resetForm()" class="btn btn-primary" style="margin-top: 15px;">🔄 Scraping Baru</button>
+        <!-- Instructions -->
+        <div class="card">
+            <h2>📖 Cara Run di GitHub</h2>
+            <ol style="margin-left: 20px; line-height: 2; color: #555;">
+                <li>Klik tombol "Buka GitHub Actions" di atas</li>
+                <li>Di GitHub, klik tombol <strong>"Run workflow"</strong> (warna biru)</li>
+                <li>Isi form yang muncul dengan data di atas</li>
+                <li>Klik <strong>"Run workflow"</strong></li>
+                <li>Tunggu 1-3 menit, cek channel Telegram Anda!</li>
+            </ol>
         </div>
 
         <!-- Footer -->
         <div class="footer">
-            <p>© 2024 | GitHub: <a href="#" class="link" id="repoLink" target="_blank">Lihat Repository</a></p>
+            <p>Repo: <a href="#" class="link" id="repoLink" target="_blank">github.com/<span id="ownerDisplay">username</span>/<span id="repoDisplay">repo</span></a></p>
         </div>
     </div>
 
     <script>
-        // GANTI INI DENGAN DATA REPOSITORY ANDA
-        const GITHUB_OWNER = 'rathxsoutetrain';      // ← GANTI
-        const GITHUB_REPO = 'telegram-scraper';     // ← GANTI
+        // ⚠️ GANTI INI DENGAN DATA ANDA
+        const GITHUB_OWNER = 'rathxsoutetrain';      // ← USERNAME GITHUB ANDA
+        const GITHUB_REPO = 'telegram-scraper';       // ← NAMA REPOSITORY
 
-        // Load config dari localStorage
+        // Build URLs yang benar
+        const REPO_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}`;
+        const ACTIONS_URL = `${REPO_URL}/actions`;
+        const WORKFLOW_URL = `${REPO_URL}/actions/workflows/scrape.yml`;
+
+        // Update tampilan
+        document.getElementById('ownerDisplay').textContent = GITHUB_OWNER;
+        document.getElementById('repoDisplay').textContent = GITHUB_REPO;
+        document.getElementById('repoLink').href = REPO_URL;
+
+        // Load dari localStorage
         document.getElementById('apiId').value = localStorage.getItem('tg_api_id') || '';
         document.getElementById('apiHash').value = localStorage.getItem('tg_api_hash') || '';
         document.getElementById('phone').value = localStorage.getItem('tg_phone') || '';
@@ -155,30 +179,13 @@
         document.getElementById('sourceGroup').value = localStorage.getItem('tg_group') || '';
         document.getElementById('targetChannel').value = localStorage.getItem('tg_channel') || '';
 
-        // Update link
-        document.getElementById('repoLink').href = `https://github.com//`;
-        document.getElementById('githubLink').href = `https://github.com///actions`;
-
-        function saveConfig() {
-            const apiId = document.getElementById('apiId').value.trim();
-            const apiHash = document.getElementById('apiHash').value.trim();
-            const phone = document.getElementById('phone').value.trim();
-            const session = document.getElementById('sessionString').value.trim();
-
-            if (!apiId || !apiHash || !phone) {
-                alert('Semua field harus diisi!');
-                return;
-            }
-
-            localStorage.setItem('tg_api_id', apiId);
-            localStorage.setItem('tg_api_hash', apiHash);
-            localStorage.setItem('tg_phone', phone);
-            localStorage.setItem('tg_session', session);
-
-            alert('✅ Config disimpan!');
+        function showError(msg) {
+            document.getElementById('errorText').textContent = msg;
+            document.getElementById('errorBox').classList.remove('hidden');
+            setTimeout(() => document.getElementById('errorBox').classList.add('hidden'), 5000);
         }
 
-        function runScraper() {
+        function generateConfig() {
             const apiId = document.getElementById('apiId').value.trim();
             const apiHash = document.getElementById('apiHash').value.trim();
             const phone = document.getElementById('phone').value.trim();
@@ -186,48 +193,50 @@
             const group = document.getElementById('sourceGroup').value.trim();
             const channel = document.getElementById('targetChannel').value.trim();
 
+            // Validasi
             if (!apiId || !apiHash || !phone || !group) {
-                alert('Lengkapi semua field!');
+                showError('Lengkapi API ID, API Hash, Phone, dan Grup Sumber!');
                 return;
             }
 
+            // Simpan ke localStorage
+            localStorage.setItem('tg_api_id', apiId);
+            localStorage.setItem('tg_api_hash', apiHash);
+            localStorage.setItem('tg_phone', phone);
+            localStorage.setItem('tg_session', session);
             localStorage.setItem('tg_group', group);
             localStorage.setItem('tg_channel', channel);
 
-            // Buka GitHub Actions dengan inputs
-            const inputs = {
+            // Buat config untuk GitHub Actions
+            const config = {
                 api_id: apiId,
                 api_hash: apiHash,
                 phone: phone,
-                session_string: session,
+                session_string: session || '(kosong - akan minta OTP)',
                 source_group: group,
-                target_channel: channel
+                target_channel: channel || '(kosong - tidak kirim ke channel)'
             };
 
-            // Encode untuk URL
-            const params = btoa(JSON.stringify(inputs));
+            const configText = JSON.stringify(config, null, 2);
             
-            // Buka GitHub Actions manual trigger
-            const githubUrl = `https://github.com///actions/workflows/scrape.yml`;
-            
-            // Copy config ke clipboard
-            navigator.clipboard.writeText(JSON.stringify(inputs, null, 2));
-            
-            alert('📋 Config dicopy ke clipboard!\n\nSekarang Anda akan diarahkan ke GitHub Actions.\nKlik "Run workflow" dan paste config di sana.');
+            // Tampilkan
+            document.getElementById('configOutput').textContent = configText;
+            document.getElementById('outputSection').classList.remove('hidden');
+            document.getElementById('githubLink').href = ACTIONS_URL;
 
-            // Buka GitHub
-            window.open(githubUrl, '_blank');
+            // Copy ke clipboard
+            navigator.clipboard.writeText(configText).then(() => {
+                console.log('Config copied!');
+            }).catch(err => {
+                console.error('Copy failed:', err);
+            });
 
-            // Tampilkan status
-            document.getElementById('configSection').classList.add('hidden');
-            document.getElementById('targetSection').classList.add('hidden');
-            document.getElementById('statusSection').classList.remove('hidden');
+            // Scroll ke output
+            document.getElementById('outputSection').scrollIntoView({ behavior: 'smooth' });
         }
 
-        function resetForm() {
-            document.getElementById('configSection').classList.remove('hidden');
-            document.getElementById('targetSection').classList.remove('hidden');
-            document.getElementById('statusSection').classList.add('hidden');
+        function openGitHub() {
+            window.open(ACTIONS_URL, '_blank');
         }
     </script>
 </body>
