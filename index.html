@@ -44,15 +44,15 @@
     </div>
 
     <script>
-        function generateScript() {
-            const apiId = document.getElementById('apiId').value;
-            const apiHash = document.getElementById('apiHash').value;
-            const phone = document.getElementById('phone').value;
-            const session = document.getElementById('session').value;
-            const group = document.getElementById('group').value;
-            const channel = document.getElementById('channel').value;
+function generateScript() {
+    const apiId = document.getElementById('apiId').value;
+    const apiHash = document.getElementById('apiHash').value;
+    const session = document.getElementById('session').value;
+    const group = document.getElementById('group').value;
+    const channel = document.getElementById('channel').value;
 
-            const script = `!pip install telethon
+    const script = `!pip install telethon
+
 from telethon import TelegramClient
 from telethon.sessions import StringSession
 import csv
@@ -63,9 +63,9 @@ session_string = '${session}'
 source_group = '${group}'
 target_channel = '${channel}'
 
-client = TelegramClient(StringSession(session_string), api_id, api_hash)
-
 async def scrape():
+    client = TelegramClient(StringSession(session_string), api_id, api_hash)
+    
     await client.start()
     print("✅ Login berhasil!")
     
@@ -85,7 +85,7 @@ async def scrape():
             print(f"Progress: {len(members)}")
     
     # Save
-    filename = f"members_{entity.title.replace(' ', '_')}.csv"
+    filename = f"members_{entity.title.replace(' ', '_').replace('/', '_')}.csv"
     with open(filename, 'w', newline='', encoding='utf-8') as f:
         writer = csv.DictWriter(f, fieldnames=['id', 'username', 'first_name', 'last_name', 'is_bot'])
         writer.writeheader()
@@ -97,18 +97,16 @@ async def scrape():
     await client.send_message(target_channel, f"📊 {len(members)} members from {entity.title}")
     await client.send_file(target_channel, filename)
     print("✅ Sent to channel!")
+    
+    await client.disconnect()
 
-with client:
-    client.loop.run_until_complete(scrape())`;
+# JALANKAN
+await scrape()`;
 
-            document.getElementById('scriptBox').value = script;
-            document.getElementById('output').style.display = 'block';
-        }
+    document.getElementById('scriptBox').value = script;
+    document.getElementById('output').style.display = 'block';
+}
 
-        function copyScript() {
-            navigator.clipboard.writeText(document.getElementById('scriptBox').value);
-            alert('Script copied! Buka Google Colab dan paste.');
-        }
     </script>
 </body>
 </html>
