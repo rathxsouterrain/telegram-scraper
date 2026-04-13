@@ -17,7 +17,7 @@ on:
         required: false
         default: ''
       source_group:
-        description: 'Grup Sumber (@username/ID)'
+        description: 'Grup Sumber (@username atau ID)'
         required: true
       target_channel:
         description: 'Channel Tujuan (@username)'
@@ -28,7 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout
+    - name: Checkout repository
       uses: actions/checkout@v3
     
     - name: Setup Python
@@ -37,10 +37,9 @@ jobs:
         python-version: '3.10'
     
     - name: Install dependencies
-      run: |
-        pip install telethon
+      run: pip install telethon
     
-    - name: 🔥 Run Scraper
+    - name: Run Scraper
       env:
         API_ID: ${{ github.event.inputs.api_id }}
         API_HASH: ${{ github.event.inputs.api_hash }}
@@ -49,9 +48,8 @@ jobs:
         SOURCE_GROUP: ${{ github.event.inputs.source_group }}
         TARGET_CHANNEL: ${{ github.event.inputs.target_channel }}
       run: |
-        python3 << 'PYTHON_SCRIPT'
+        python3 << 'EOF'
         import os
-        import sys
         import csv
         import asyncio
         from telethon import TelegramClient
@@ -70,26 +68,23 @@ jobs:
             print("=" * 60)
             
             # Setup client
-            if session_str:
+            if session_str and session_str != '(kosong - akan minta OTP)':
                 client = TelegramClient(StringSession(session_str), api_id, api_hash)
-                print("📱 Menggunakan session string yang ada")
+                print("📱 Menggunakan session string")
             else:
                 client = TelegramClient(StringSession(), api_id, api_hash)
-                print("📱 Session baru (akan minta OTP)")
+                print("❌ Session kosong - akan gagal login!")
+                print("💡 Dapatkan session string dari login manual")
+                return
             
             await client.connect()
             
-            # Login jika belum
             if not await client.is_user_authorized():
-                print(f"📤 Mengirim kode OTP ke {phone}")
-                await client.send_code_request(phone)
-                print("❌ Anda perlu login manual pertama kali!")
-                print("💡 Gunakan script lokal untuk mendapatkan session string")
+                print("❌ Belum authorized! Session string invalid.")
                 return
             
             print(f"✅ Login berhasil!")
-            print(f"🔑 Session String: {client.session.save()}")
-            print("-" * 60)
+            print(f"🔑 Session: {client.session.save()}")
             
             # Get group
             try:
@@ -97,13 +92,13 @@ jobs:
                     entity = await client.get_entity(int(source_group))
                 else:
                     entity = await client.get_entity(source_group)
-                print(f"👥 Target Grup: {entity.title}")
+                print(f"👥 Grup: {entity.title}")
             except Exception as e:
                 print(f"❌ Error grup: {e}")
                 return
             
-            # Scrape members
-            print(f"\n📥 Mulai scraping...")
+            # Scrape
+            print(f"\n📥 Scraping...")
             members = []
             
             async for member in client.iter_participants(entity):
@@ -117,7 +112,7 @@ jobs:
                 })
                 
                 if len(members) % 100 == 0:
-                    print(f"   Progress: {len(members)} anggota...")
+                    print(f"   Progress: {len(members)}...")
             
             print(f"\n✅ Total: {len(members)} anggota")
             
@@ -131,23 +126,13 @@ jobs:
             print(f"💾 File: {filename}")
             
             # Send to channel
-            try:
-                await client.send_message(target_channel, f"""📊 **HASIL SCRAPING**
-
-👥 Grup: {entity.title}
-📊 Total: {len(members)} anggota
-🤖 Bot: {sum(1 for m in members if m['is_bot'] == 'Yes')}
-👤 Users: {sum(1 for m in members if m['is_bot'] == 'No')}
-
-📁 File CSV terlampir...""")
-                
-                await client.send_file(target_channel, filename, caption="📁 Daftar lengkap anggota")
-                print(f"✅ Terkirim ke {target_channel}")
-            except Exception as e:
-                print(f"❌ Error kirim: {e}")
-            
-            # Upload artifact
-            print(f"\n📤 Mengupload artifact...")
+            if target_channel and target_channel != '(kosong - tidak kirim ke channel)':
+                try:
+                    await client.send_message(target_channel, f"📊 **HASIL SCRAPING**\n\n👥 Grup: {entity.title}\n📊 Total: {len(members)} anggota")
+                    await client.send_file(target_channel, filename, caption="📁 Daftar anggota")
+                    print(f"✅ Terkirim ke {target_channel}")
+                except Exception as e:
+                    print(f"❌ Gagal kirim: {e}")
             
             await client.disconnect()
             print("=" * 60)
@@ -155,9 +140,9 @@ jobs:
             print("=" * 60)
         
         asyncio.run(main())
-        PYTHON_SCRIPT
+        EOF
     
-    - name: 📤 Upload CSV
+    - name: Upload CSV
       uses: actions/upload-artifact@v3
       with:
         name: telegram-members
